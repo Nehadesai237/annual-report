@@ -1,0 +1,130 @@
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: annual-report-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: annual_report
+    volumes:
+      - mongodb_data:/data/db
+      - ./sample_data:/docker-entrypoint-initdb.d
+    networks:
+      - annual-report-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: annual-report-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/annual_report?authSource=admin
+      - DATABASE_NAME=annual_report
+      - SECRET_KEY=your-secret-key-change-in-production
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - MAX_FILE_SIZE=10485760
+      - UPLOAD_DIR=uploads
+      - ML_MODEL_PATH=./ml/models/model.h5
+      - ML_THRESHOLD=0.6
+      - ML_ENABLED=true
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+      - ./ml:/app/ml
+      - ./reports:/app/reports
+    depends_on:
+      - mongodb
+    networks:
+      - annual-report-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: annual-report-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_ENVIRONMENT=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - annual-report-network
+    command: npm start
+
+  # ML Service (Optional - for background processing)
+  ml-service:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: annual-report-ml
+    restart: unless-stopped
+    environment:
+      - ML_MODEL_PATH=/app/models/model.h5
+      - ML_THRESHOLD=0.6
+    volumes:
+      - ./ml:/app
+      - ./uploads:/app/uploads
+    networks:
+      - annual-report-network
+    profiles:
+      - ml
+
+  # Redis (for background tasks)
+  redis:
+    image: redis:7-alpine
+    container_name: annual-report-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - annual-report-network
+    profiles:
+      - redis
+
+  # Nginx (for production)
+  nginx:
+    image: nginx:alpine
+    container_name: annual-report-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infra/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - annual-report-network
+    profiles:
+      - production
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  annual-report-network:
+    driver: bridge

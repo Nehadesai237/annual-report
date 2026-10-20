@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: annual-report-mongodb-prod
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: annual_report
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - annual-report-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: annual-report-backend-prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/annual_report?authSource=admin
+      - DATABASE_NAME=annual_report
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - MAX_FILE_SIZE=10485760
+      - UPLOAD_DIR=uploads
+      - ML_MODEL_PATH=./ml/models/model.h5
+      - ML_THRESHOLD=0.6
+      - ML_ENABLED=true
+    volumes:
+      - ./uploads:/app/uploads
+      - ./ml:/app/ml
+      - ./reports:/app/reports
+    depends_on:
+      - mongodb
+    networks:
+      - annual-report-network
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: annual-report-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
+      - REACT_APP_ENVIRONMENT=production
+    depends_on:
+      - backend
+    networks:
+      - annual-report-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: annual-report-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infra/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - annual-report-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  annual-report-network:
+    driver: bridge

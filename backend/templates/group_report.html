@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Complete Achievement Report</title>
+<style>
+    body {
+        font-family: "Times New Roman", serif;
+        background: #e9ecef;
+        margin: 0;
+        padding: 30px;
+    }
+    .page {
+        width: 900px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px 40px;
+        border: 12px double #000;
+        page-break-after: always;
+    }
+    .page:last-child {
+        page-break-after: auto;
+    }
+    .header {
+        text-align: center;
+        margin-bottom: 25px;
+        position: relative;
+    }
+    .header img {
+        width: 120px;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+    .header h2 {
+        font-size: 26px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+    .header h3 {
+        font-size: 18px;
+        margin: 4px 0;
+    }
+    .report-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-top: 15px;
+        padding: 6px 0;
+        border-top: 2px solid #000;
+        border-bottom: 2px solid #000;
+        text-transform: uppercase;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        font-size: 18px;
+    }
+    td {
+        border: 1px solid black;
+        padding: 10px 12px;
+        vertical-align: top;
+    }
+    .section-heading {
+        margin-top: 20px;
+        font-weight: bold;
+        font-size: 20px;
+        text-decoration: underline;
+    }
+    .event-details {
+        line-height: 1.6;
+        font-size: 18px;
+    }
+    .image-box {
+        height: 330px;
+        text-align: center;
+    }
+    .image-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 6px;
+    }
+    .signature-block {
+        margin-top: 40px;
+        font-size: 18px;
+        text-align: right;
+        position: relative;
+    }
+
+    @media print {
+        body { background: white; padding: 0; margin: 0; }
+        .page { 
+            border: none; 
+            margin: 0; 
+            width: 100%; 
+            page-break-after: always;
+        }
+        .page:last-child {
+            page-break-after: auto;
+        }
+    }
+</style>
+</head>
+<body>
+
+{% if activities and activities|length > 0 %}
+{% for activity in activities %}
+<div class="page">
+
+    <div class="header">
+        <img src="top_header.png" alt="College Logo" style="height: 130px; width: 250px;">
+        <h3 style="margin-top: -20px; margin-left: 200px; font-size: 15px;">Shree Warana Vibhag Shikshan Mandal's</h3>
+        <h2 style=" margin-left: 190px; font-size: 18px;">Tatyasaheb Kore Institute of Engineering & Technology, Warananaga  </h2>
+        <h3 style=" margin-left: 190px; font-size: 15px;"><i>An Autonomous Institute</i></h3>
+        <h3 style=" margin-left: 190px; font-size: 15px;">Department of {{ activity.department }}</h3>
+        <div class="report-title">STUDENTS PARTICIPATION REPORT</div>
+    </div>
+
+    <table>
+        <tr>
+            <td><b>Student Name:</b></td>
+            <td>{{ activity.user.name }}</td>
+        </tr>
+        <tr>
+            <td><b>PRN & Class:</b></td>
+            <td>{{ activity.year }} {{ activity.department }}</td>
+        </tr>
+        {% if activity.achievement_type == "group" and activity.group_members_details %}
+        <tr>
+            <td><b>Group Members:</b></td>
+            <td>
+                <table style="width: 100%; border-collapse: collapse; margin: 0; border: 1px solid black;">
+                    <tr style="background-color: #f0f0f0;">
+                        <td style="border: 1px solid black; padding: 8px 12px; font-weight: bold; font-size: 16px; width: 30%;">Name</td>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-weight: bold; font-size: 16px; width: 25%;">Department</td>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-weight: bold; font-size: 16px; width: 20%;">Year</td>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-weight: bold; font-size: 16px; width: 25%;">Student ID</td>
+                    </tr>
+                    {% for member in activity.group_members_details %}
+                    <tr>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-size: 16px;">{{ member.name }}</td>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-size: 16px;">{{ member.department }}</td>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-size: 16px;">{{ member.year_of_study if member.year_of_study else 'N/A' }}</td>
+                        <td style="border: 1px solid black; padding: 8px 12px; font-size: 16px;">{{ member.student_id if member.student_id else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td><b>Participated Event Name:</b></td>
+            <td>{{ activity.title }}</td>
+        </tr>
+        <tr>
+            <td><b>Event Date:</b></td>
+            <td>{{ activity.created_at.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td><b>Event Details:</b></td>
+            <td class="event-details">{{ activity.description }}</td>
+        </tr>
+        <tr>
+            <td><b>Participation Status:</b></td>
+            <td>{{ activity.status }}</td>
+        </tr>
+        <tr>
+            <td><b>Certificate:</b></td>
+            <td>{{ 'Available' if activity.has_certificate else 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td><b>Participation Image:</b></td>
+            <td class="image-box">
+                {% if activity.images %}
+                    <img src="{{ api_base_url }}{{ activity.images[0].path }}">
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="signature-block">
+        <img src="stamp.png" alt="Signature" style=" position: absolute;
+        top: -45px;
+        right: 0px;
+        height: 150px;
+        width: 150px;
+        width: auto;">
+        
+        <b>Principal:</b> Mr. D.N. Mane <br><br><br>
+        
+        <img src="sign.png" alt="Signature" style=" position: absolute;
+        top: -45px;
+        right: 0;
+        height: 200px;
+        width: 200px;
+        width: auto;">
+        <b>Signature</b> ______________________ 
+    </div>
+
+</div>
+{% endfor %}
+{% else %}
+<div class="page">
+    <div class="header">
+        <img src="top_header.png" alt="College Logo" style="height: 130px; width: 250px;">
+        <h3 style="margin-top: -20px; margin-left: 200px; font-size: 15px;">Shree Warana Vibhag Shikshan Mandal's</h3>
+        <h2 style=" margin-left: 190px; font-size: 18px;">Tatyasaheb Kore Institute of Engineering & Technology, Warananaga  </h2>
+        <h3 style=" margin-left: 190px; font-size: 15px;"><i>An Autonomous Institute</i></h3>
+        <div class="report-title">COMPLETE ACHIEVEMENT REPORT</div>
+    </div>
+    <table>
+        <tr>
+            <td style="text-align: center; padding: 40px; font-size: 20px;">
+                <p>No accepted achievements found.</p>
+                <p style="font-size: 16px; margin-top: 10px;">Please ensure your achievements have been approved by an administrator.</p>
+            </td>
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+</body>
+</html>
